@@ -1,2 +1,3 @@
 /lsystem
-*.png
+/output/**/*.png
+

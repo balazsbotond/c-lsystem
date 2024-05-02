@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Image Color Reader</title>
+</head>
+<body>
+<input type="file" id="imageInput" accept="image/*">
+<pre id="colorOutput"></pre>
+<button id="copyButton">Copy to Clipboard</button>
+
+<script>
+  document.getElementById('imageInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+
+        const imageData = ctx.getImageData(0, 0, img.width, 1);
+        const data = imageData.data;
+        let colors = '';
+        
+        for (let i = 0; i < data.length; i += 4) {
+          colors += `{${data[i]}, ${data[i+1]}, ${data[i+2]}}`;
+          if (i < data.length - 4) colors += ', \n';
+        }
+
+        document.getElementById('colorOutput').textContent = colors;
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('copyButton').addEventListener('click', function() {
+    const content = document.getElementById('colorOutput').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+      alert('Copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  });
+</script>
+</body>
+</html>
