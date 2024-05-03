@@ -304,8 +304,73 @@ void lsys_draw(Viewport* viewport, CoordinateSystem* cs, LSystem* lsys, char* in
     cairo_set_source_rgb(cr, 0, 0, 0); // black
     cairo_paint(cr);
 
-    cairo_set_source_rgb(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
+    // cairo_set_source_rgb(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
     // cairo_set_line_width(cr, line_width);
+
+    // cairo_pattern_t* radpat = cairo_pattern_create_radial(1881, 3069, 100, 1881, 3069, 3000);
+    cairo_pattern_t* radpat = cairo_pattern_create_radial(2464, 3223, 100, 2464, 3223, 3000);
+    // cairo_pattern_t* radpat = cairo_pattern_create_radial(4960 / 2, 7016 / 2, 0, 4960 / 2, 7016 / 2, max(4960, 7016) / 2);
+
+    // Pink
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.0, 234/255.0, 173/255.0, 237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.2, 1.0, 1.0, 1.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.3, 234/255.0, 173/255.0, 237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.4, 1.0, 1.0, 1.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.5, 234/255.0, 173/255.0, 237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.0, 1.0, 1.0, 1.0);
+
+    // Horizon
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.00, 12/255.0, 92/255.0, 146/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.53, 255/255.0, 251/255.0,  251/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.55, 66/255.0, 31/255.0, 9/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.61, 255/255.0, 207/255.0, 140/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.94, 89/255.0, 41/255.0, 15/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.00, 255/255.0, 142/255.0, 56/255.0);
+
+    // // Pastels
+    // cairo_pattern_add_color_stop_rgb(radpat, 0, 245/255.0,224/255.0,176/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.09, 246/255.0,189/255.0, 237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.13, 194/255.0,207/255.0,246/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.18, 184/255.0,160/255.0,168/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.25, 171/255.0,186/255.0,248/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.32, 243/255.0,248/255.0,224/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.38, 249/255.0,162/255.0,183/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.47, 100/255.0,115/255.0,124/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.58, 251/255.0,205/255.0,202/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.64, 170/255.0,128/255.0,185/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.74, 252/255.0,222/255.0,204/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.80, 206/255.0,122/255.0,218/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.86, 254/255.0,223/255.0,175/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.91, 254/255.0,236/255.0,244/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.00, 255/255.0,191/255.0, 221/255.0);
+
+    // // Golden
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.0, 235/255.0,219/255.0,102/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.41, 245/255.0, 236/255.0,112/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.51, 209/255.0,190/255.0,76/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.57, 187/255.0,156/255.0,51/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.63, 168/255.0,142/255.0, 42/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.69, 202/255.0,174/255.0,68/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.75, 218/255.0,202/255.0,86/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.81, 208/255.0,187/255.0,73/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.87, 187/255.0,156/255.0,51/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.00, 137/255.0,108/255.0,26/255.0);
+
+    // Simple Pink
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.00, 234/255.0,173/255.0,237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.40, 234/255.0,173/255.0,237/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.00, 255/255.0,255/255.0,255/255.0);
+
+    // Yellow-Blue
+    cairo_pattern_add_color_stop_rgb(radpat, 0.00, 251/255.0, 255/255.0, 237/134.0);
+    cairo_pattern_add_color_stop_rgb(radpat, 1.00, 143/255.0, 211/255.0, 255/255.0);
+
+    // // Strawberry
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.00, 166/255.0, 203/255.0, 150/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 0.80, 255/255.0, 162/255.0, 172/255.0);
+    // cairo_pattern_add_color_stop_rgb(radpat, 1.00, 255/255.0, 162/255.0, 172/255.0);
+
+    cairo_set_source(cr, radpat);
 
     Turtle turtle = turtle_create(lsys->rotation);
     TurtleStack* stack = stack_create();
@@ -326,14 +391,14 @@ void lsys_draw(Viewport* viewport, CoordinateSystem* cs, LSystem* lsys, char* in
             // cairo_set_source_rgb(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
             // palette_index = (palette_index + 1) % palette_size;
 
-            if (stack->top <= 50) {
+            // if (stack->top <= 50) {
                 double line_width = max(1, max_line_width - (stack->top / 5));
                 cairo_set_line_width(cr, line_width);
 
                 cairo_move_to(cr, cs_convert_x(cs, turtle.pos.x), cs_convert_y(cs, turtle.pos.y));
                 cairo_line_to(cr, cs_convert_x(cs, next.x), cs_convert_y(cs, next.y));
                 cairo_stroke(cr);
-            }
+            // }
 
             turtle.pos = next;
         } else if (c == 'D' || c == 'M') { // go forward without drawing
@@ -420,10 +485,10 @@ int main() {
     // lsys.rules_count = 1;
 
     // Infinite Leaf
-    LSystem lsys = {30, 0, ">X", NULL, 0, 29};
+    LSystem lsys = {30, 0, "X", NULL, 0, 29};
     lsys.rules = malloc(sizeof(Rule) * 1);
     lsys.rules[0].symbol = 'X';
-    lsys.rules[0].substitution = "[>+@.9FX@.5[>!X]]";
+    lsys.rules[0].substitution = "[+@.9FX@.5[!X]]";
     lsys.rules_count = 1;
 
     clock_t start = clock();
@@ -434,11 +499,11 @@ int main() {
     CoordinateSystem* coord_system = cs_fit(bounding_rect, &viewport, 400);
 
     Color colors[] = {
-        {143, 211, 255}, // light blue
-        {143, 248, 226}, // light cyan
-        {199, 220, 208}, // light teal
         {234, 173, 237}, // light pink
+        {143, 248, 226}, // light cyan
         {235, 190, 237}, // lighter pink
+        {199, 220, 208}, // light teal
+        {143, 211, 255}, // light blue
         {255, 255, 255},
         {204, 181, 74},
         {110, 240, 74},
@@ -523,31 +588,54 @@ int main() {
     int palette_size = 1;
     char palette_name[] = "yellow";
 
-    for (int ci = 0; ci < num_colors; ci++) {
-        for (int wi = 0; wi < num_line_widths; wi++) {
-            char file_name[100];
-            sprintf(
-                file_name,
-                "output/infinite-leaf_line(%g-1)_rgb(%d,%d,%d)_iter(%d).png",
-                line_widths[wi],
-                colors[ci].red,
-                colors[ci].green,
-                colors[ci].blue,
-                lsys.iterations
-            );
+    // for (int wi = 0; wi < num_line_widths; wi++) {
+    //     for (int ci = 0; ci < num_colors; ci++) {
+    //         char file_name[100];
+    //         sprintf(
+    //             file_name,
+    //             "output/infinite-leaf_line(%g-1)_rgb(%d,%d,%d)_iter(%d).png",
+    //             line_widths[wi],
+    //             colors[ci].red,
+    //             colors[ci].green,
+    //             colors[ci].blue,
+    //             lsys.iterations
+    //         );
 
-            printf("Drawing: %s\n", file_name);
+    //         printf("Drawing: %s\n", file_name);
 
-            lsys_draw(
-                &viewport,
-                coord_system,
-                &lsys,
-                instructions,
-                colors[ci],
-                line_widths[wi],
-                file_name
-            );
-        }
+    //         lsys_draw(
+    //             &viewport,
+    //             coord_system,
+    //             &lsys,
+    //             instructions,
+    //             colors[ci],
+    //             line_widths[wi],
+    //             file_name
+    //         );
+
+    //     }
+    // }
+
+    for (int wi = 0; wi < num_line_widths; wi++) {
+        char file_name[100];
+        sprintf(
+            file_name,
+            "output/infinite-leaf_line(%g-1)_grad(yellow-blue)_iter(%d).png",
+            line_widths[wi],
+            lsys.iterations
+        );
+
+        printf("Drawing: %s\n", file_name);
+
+        lsys_draw(
+            &viewport,
+            coord_system,
+            &lsys,
+            instructions,
+            colors[0],
+            line_widths[wi],
+            file_name
+        );
     }
 
     // for (int wi = 0; wi < 4; wi++) {
