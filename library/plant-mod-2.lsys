@@ -1,0 +1,6 @@
+  angle: 2
+  axiom: [x]
+  rotation: 60
+
+x=[@.9+f+f+f+fx[++++@.4x][!++@.4y]]
+y=[@.9-f-f-f-fx[++++@.4x][!++@.4y]]
