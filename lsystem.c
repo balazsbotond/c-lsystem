@@ -68,7 +68,6 @@ ProgramOptions parse_program_options(int argc, char** argv) {
     Plugin background_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(0, 0, 0)", &background_str));
     Plugin foreground_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(255, 255, 255)", &foreground_str));
     Plugin line_plugin = lsys_plugin_stack_depth_line_width_create(parse_stack_depth_line_width_options("stack(1)"));
-printf("Debug: fg=%s, bg=%s, line=%s\n", foreground_str, background_str, line_str);
 
     struct option long_options[] = {
         {"file", required_argument, 0, 'f'},
@@ -169,11 +168,11 @@ void create_directory_if_not_exists(const char* dir_path) {
 
 char* get_filename_without_ext(char* filepath) {
     char* tmp = strdup(filepath);
-    char* base = basename(tmp); // get the filename
-    char* lastdot = strrchr(base, '.'); // find the last dot
+    char* base = basename(tmp);
+    char* lastdot = strrchr(base, '.');
 
     if (lastdot != NULL) {
-        *lastdot = '\0'; // replace the dot with a null character
+        *lastdot = '\0';
     }
 
     return base;
@@ -273,7 +272,6 @@ int main(int argc, char** argv) {
         printf("Cache saved.\n");
     }
 
-printf("Debug: fg=%s, bg=%s, line=%s\n", options.plugin_strs[1], options.plugin_strs[0], options.plugin_strs[2]);
     char file_name[100];
     sprintf(
         file_name,

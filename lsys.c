@@ -203,6 +203,10 @@ Rectangle lsys_measure(
     return bounding_rect;
 }
 
+/*
+ * Background pattern plugin
+ */
+
 void plugin_bg_pattern_init(cairo_t* cr, void* data) {
     cairo_pattern_t* pattern = (cairo_pattern_t*)data;
     cairo_set_source(cr, pattern);
@@ -231,6 +235,10 @@ void lsys_plugin_bg_pattern_destroy(Plugin plugin) {
     cairo_pattern_destroy((cairo_pattern_t*)plugin.data);
 }
 
+/*
+ * Foreground pattern plugin
+ */
+
 void plugin_pattern_init(cairo_t* cr, void* data) {
     cairo_pattern_t* pattern = (cairo_pattern_t*)data;
     cairo_set_source(cr, pattern);
@@ -257,6 +265,10 @@ Plugin lsys_plugin_pattern_create(cairo_pattern_t* pattern) {
 void lsys_plugin_pattern_destroy(Plugin plugin) {
     cairo_pattern_destroy((cairo_pattern_t*)plugin.data);
 }
+
+/*
+ * Stack depth line width plugin
+ */
 
 void plugin_stack_depth_line_width_init(cairo_t* cr, void* data) {
     // do nothing
