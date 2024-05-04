@@ -1,0 +1,5 @@
+  rotation: 90
+  angle: 45
+  axiom: >[FX]+[fx]+[fx]+[fx]+[FX]+[fx]+[fx]+[fx]
+
+  X = @.6[>-FX]>+FX

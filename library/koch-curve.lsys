@@ -1,0 +1,5 @@
+angle: 60
+rotation: 0
+axiom: F
+
+F = F+F--F+F

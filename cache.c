@@ -19,6 +19,10 @@ void cache_save(
 
     fwrite(lsys, sizeof(LSystem), 1, file);
 
+    size_t axiom_length = strlen(lsys->axiom);
+    fwrite(&axiom_length, sizeof(size_t), 1, file);
+    fwrite(lsys->axiom, sizeof(char), axiom_length, file);
+
     for (int i = 0; i < lsys->rules_count; i++) {
         fwrite(&lsys->rules[i].symbol, sizeof(char), 1, file);
         size_t substitution_length = strlen(lsys->rules[i].substitution);
@@ -51,6 +55,12 @@ bool cache_load(
 
     *lsys = malloc(sizeof(LSystem));
     fread(*lsys, sizeof(LSystem), 1, file);
+
+    size_t axiom_length;
+    fread(&axiom_length, sizeof(size_t), 1, file);
+    (*lsys)->axiom = malloc(sizeof(char) * (axiom_length + 1));
+    fread((*lsys)->axiom, sizeof(char), axiom_length, file);
+    (*lsys)->axiom[axiom_length] = '\0';
 
     (*lsys)->rules = malloc(sizeof(Rule) * (*lsys)->rules_count);
     for (int i = 0; i < (*lsys)->rules_count; i++) {

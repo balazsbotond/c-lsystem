@@ -19,6 +19,18 @@ char* lookup_rule(LSystem* lsys, char symbol) {
     return NULL;
 }
 
+void lsys_print(LSystem* lsys) {
+    printf(" - angle: %f\n", lsys->angle);
+    printf(" - rotation: %f\n", lsys->rotation);
+    printf(" - axiom: %s\n", lsys->axiom);
+    printf(" - iterations: %d\n", lsys->iterations);
+
+    printf(" - rules:\n");
+    for (int i = 0; i < lsys->rules_count; i++) {
+        printf("   - %c -> %s\n", lsys->rules[i].symbol, lsys->rules[i].substitution);
+    }
+}
+
 bool lsys_equals(LSystem* lsys1, LSystem* lsys2) {
     if (lsys1->angle != lsys2->angle) return false;
     if (lsys1->rotation != lsys2->rotation) return false;
@@ -34,11 +46,14 @@ bool lsys_equals(LSystem* lsys1, LSystem* lsys2) {
     return true;
 }
 
-char* lsys_iterate(LSystem* lsys) {
+char* lsys_iterate(
+    LSystem* lsys,
+    IterateProgressAction progress_action,
+    void* action_data
+) {
     char* current = malloc(sizeof(char) * (strlen(lsys->axiom) + 1));
     strcpy(current, lsys->axiom);
     char* next;
-    printf("Iterating...\n");
 
     for (int i = 0; i < lsys->iterations; i++) {
 
@@ -76,8 +91,7 @@ char* lsys_iterate(LSystem* lsys) {
 
         clock_t end = clock();
         double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-        printf(i == lsys->iterations - 1 ? "└ " : "├ ");
-        printf("i = %d: %.1f seconds\n", i + 1, elapsed);
+        progress_action(i, action_data);
     }
 
     return current;
@@ -222,12 +236,12 @@ void lsys_draw(
     char* file_name,
     RenderProgressAction progress_action
 ) {
-    clock_t start = clock();
-    cairo_surface_t *surface;
-    cairo_t *cr;
-
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, viewport->width, viewport->height);
-    cr = cairo_create(surface);
+    cairo_surface_t *surface = cairo_image_surface_create(
+        CAIRO_FORMAT_ARGB32,
+        viewport->width,
+        viewport->height
+    );
+    cairo_t *cr = cairo_create(surface);
 
     cairo_set_source_rgb(cr, 0, 0, 0); // black
     cairo_paint(cr);
@@ -277,4 +291,15 @@ void lsys_draw(
     cairo_surface_write_to_png(surface, file_name);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
+}
+
+void lsys_destroy(LSystem* lsys) {
+    free(lsys->axiom);
+
+    for (int i = 0; i < lsys->rules_count; i++) {
+        free(lsys->rules[i].substitution);
+    }
+
+    free(lsys->rules);
+    free(lsys);
 }

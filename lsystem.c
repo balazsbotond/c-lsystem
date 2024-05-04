@@ -2,6 +2,7 @@
 #include "color.h"
 #include "coordinate_system.h"
 #include "lsys.h"
+#include "lsys_parser.h"
 #include "rectangle.h"
 #include "timer.h"
 #include "turtle_stack.h"
@@ -10,6 +11,7 @@
 #include "vector.h"
 #include "viewport.h"
 #include <cairo.h>
+#include <libgen.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -31,52 +33,60 @@ void create_directory_if_not_exists(const char* dir_path) {
     }
 }
 
+char* get_filename_without_ext(char* filepath) {
+    char* tmp = strdup(filepath);
+    char* base = basename(tmp); // get the filename
+    char* lastdot = strrchr(base, '.'); // find the last dot
+
+    if (lastdot != NULL) {
+        *lastdot = '\0'; // replace the dot with a null character
+    }
+
+    return base;
+}
+
 void percentage_logger_action(size_t current, size_t total) {
     printf("└ Rendering: %.2f %%\r", 100.0 * current / total);
 }
 
-int main() {
+typedef struct {
+    Timer* timer;
+    int iterations;
+} IterateLoggerData;
+
+void iterate_logger_action(int i, void* data) {
+    IterateLoggerData* ild = (IterateLoggerData*) data;
+    double elapsed = timer_stop(ild->timer);
+    bool last = i == ild->iterations - 1;
+
+    printf(last ? "└ " : "├ ");
+    printf("i = %d: %.1f seconds\n", i + 1, elapsed);
+
+    if (!last) timer_start(ild->timer);
+}
+
+int main(int argc, char** argv) {
+    if (argc != 3) {
+        printf("Usage: %s <file_name> <iterations>\n", argv[0]);
+        return 1;
+    }
+
+    char* file_name = argv[1];
+    char* lsys_name = get_filename_without_ext(file_name);
+    int iterations = atoi(argv[2]);
+
+    LSystem* lsys = lsys_load(file_name);
+    lsys->iterations = iterations;
+
+    printf("Loaded from '%s':\n", file_name);
+    lsys_print(lsys);
+
     create_directory_if_not_exists(OUTPUT_DIR);
     create_directory_if_not_exists(CACHE_DIR);
 
-    // // Koch Curve
-    // LSystem lsys = {60, 0, "F", NULL, 0, 7};
-    // lsys.rules = malloc(sizeof(Rule) * 1);
-    // lsys.rules[0].symbol = 'F';
-    // lsys.rules[0].substitution = "F+F--F+F";
-    // lsys.rules_count = 1;
-
-    // // Hiway
-    // LSystem lsys = {90, 0, "FX", NULL, 0, 13};
-
-    // lsys.rules_count = 3;
-
-    // lsys.rules = malloc(sizeof(Rule) * lsys.rules_count);
-    // lsys.rules[0].symbol = 'X';
-    // lsys.rules[0].substitution = "FX+FY";
-    // lsys.rules[1].symbol = 'Y';
-    // lsys.rules[1].substitution = "FX-FY";
-    // lsys.rules[2].symbol = 'F';
-    // lsys.rules[2].substitution = "";
-
-    // // Y Tree
-    // LSystem lsys = {45, 90, "FX", NULL, 0, 12};
-    // lsys.rules = malloc(sizeof(Rule) * 1);
-    // lsys.rules[0].symbol = 'X';
-    // lsys.rules[0].substitution = "@0.6[-FX]+FX";
-    // lsys.rules_count = 1;
-
-    // Infinite Leaf
-    LSystem lsys = {30, 0, "X", NULL, 0, 20};
-    lsys.rules = malloc(sizeof(Rule) * 1);
-    lsys.rules[0].symbol = 'X';
-    lsys.rules[0].substitution = "[+@.9FX@.5[!X]]";
-    lsys.rules_count = 1;
-
-    clock_t start = clock();
+    Timer total_timer = timer_start();
 
     Viewport viewport = {4960, 7016};
-
     LSystem* cached_lsys;
     Viewport* cached_viewport;
     char* instructions;
@@ -94,7 +104,7 @@ int main() {
     );
 
     bool stale = !cache_loaded ||
-        cache_stale(&lsys, cached_lsys, &viewport, cached_viewport);
+        cache_stale(lsys, cached_lsys, &viewport, cached_viewport);
 
     if (cache_loaded && !stale) {
         printf("Cache loaded.\n");
@@ -107,18 +117,21 @@ int main() {
             free(instructions);
             free(coord_system);
         }
-
-        instructions = lsys_iterate(&lsys);
+    
+        printf("Iterating:\n");
+        Timer timer = timer_start();
+        IterateLoggerData ild = {&timer, lsys->iterations};
+        instructions = lsys_iterate(lsys, iterate_logger_action, &ild);
 
         printf("Measuring:\n");
-        Timer timer = timer_start();
-        Rectangle* bounding_rect = lsys_measure(&lsys, instructions, percentage_logger_action);
+        timer = timer_start();
+        Rectangle* bounding_rect = lsys_measure(lsys, instructions, percentage_logger_action);
         double elapsed = timer_stop(&timer);
         printf("└ Elapsed: %.1f seconds\n", elapsed);
 
         coord_system = cs_fit(bounding_rect, &viewport, 400);
 
-        cache_save(&lsys, &viewport, coord_system, instructions, cache_file_path);
+        cache_save(lsys, &viewport, coord_system, instructions, cache_file_path);
         printf("Cache saved.\n");
 
         free(bounding_rect);
@@ -136,119 +149,19 @@ int main() {
         {84, 112, 240}
     };
     int num_colors = 9;
-    double line_widths[] = {1, 2, 3, 4};
-    int num_line_widths = 4;
-
-    // Color palette[] = {
-    //     {22, 99, 150}, 
-    //     {43, 113, 160}, 
-    //     {64, 126, 168}, 
-    //     {90, 143, 180}, 
-    //     {111, 156, 188}, 
-    //     {131, 170, 198}, 
-    //     {169, 195, 214}, 
-    //     {209, 221, 231}, 
-    //     {248, 246, 249}, 
-    //     {228, 183, 122}, 
-    //     {233, 185, 124}, 
-    //     {203, 156, 101}, 
-    //     {173, 125, 79}, 
-    //     {144, 96, 56}, 
-    //     {115, 67, 35}, 
-    //     {111, 54, 21}        
-    // };
-    // int palette_size = 16;
-    // char palette_name[] = "blue-brown";
-
-    // Color palette[] = {
-    //     {93, 146, 182}, 
-    //     {107, 156, 189}, 
-    //     {122, 165, 194}, 
-    //     {140, 177, 203}, 
-    //     {155, 186, 208}, 
-    //     {169, 196, 215}, 
-    //     {195, 213, 226}, 
-    //     {223, 231, 238}, 
-    //     {250, 249, 251}, 
-    //     {236, 205, 162}, 
-    //     {240, 206, 164}, 
-    //     {219, 186, 148}, 
-    //     {198, 164, 132}, 
-    //     {178, 144, 116}, 
-    //     {157, 124, 102}, 
-    //     {155, 115, 92}
-    // };
-    // int palette_size = 16;
-    // char palette_name[] = "blue-brown-light";
-
-    // Color palette[] = {
-    //     {144, 115, 27}, 
-    //     {169, 144, 44}, 
-    //     {199, 176, 69}, 
-    //     {225, 207, 93}, 
-    //     {239, 225, 106}, 
-    //     {242, 233, 109}, 
-    //     {226, 211, 93}, 
-    //     {208, 189, 75}, 
-    //     {189, 159, 54}, 
-    //     {174, 146, 45}, 
-    //     {191, 164, 59}, 
-    //     {209, 186, 75}, 
-    //     {215, 199, 83}, 
-    //     {207, 186, 73}, 
-    //     {191, 161, 55}, 
-    //     {154, 124, 35}
-    // };
-    // int palette_size = 16;
-    // char palette_name[] = "gold";
-
-    // Color colors[] = {
-    //     {255, 255, 255},
-    //     {204, 181, 74},
-    //     {110, 240, 74},
-    //     {84, 112, 240}
-    // };
-    Color palette[] = {
-        {204, 181, 74},
-    };
-    int palette_size = 1;
-    char palette_name[] = "yellow";
-
-    // for (int wi = 0; wi < num_line_widths; wi++) {
-    //     for (int ci = 0; ci < num_colors; ci++) {
-    //         char file_name[100];
-    //         sprintf(
-    //             file_name,
-    //             "output/infinite-leaf_line(%g-1)_rgb(%d,%d,%d)_iter(%d).png",
-    //             line_widths[wi],
-    //             colors[ci].red,
-    //             colors[ci].green,
-    //             colors[ci].blue,
-    //             lsys.iterations
-    //         );
-
-    //         printf("Drawing: %s\n", file_name);
-
-    //         lsys_draw(
-    //             &viewport,
-    //             coord_system,
-    //             &lsys,
-    //             instructions,
-    //             colors[ci],
-    //             line_widths[wi],
-    //             file_name
-    //         );
-
-    //     }
-    // }
+    // double line_widths[] = {1, 2, 3, 4};
+    // int num_line_widths = 4;
+    double line_widths[] = {4};
+    int num_line_widths = 1;
 
     for (int wi = 0; wi < num_line_widths; wi++) {
         char file_name[100];
         sprintf(
             file_name,
-            "output/infinite-leaf_line(%g-1)_grad(yellow-blue)_iter(%d).png",
+            "output/%s_line(%g-1)_grad(yellow-blue)_iter(%d).png",
+            lsys_name,
             line_widths[wi],
-            lsys.iterations
+            lsys->iterations
         );
 
         printf("Drawing: %s\n", file_name);
@@ -256,7 +169,7 @@ int main() {
         lsys_draw(
             &viewport,
             coord_system,
-            &lsys,
+            lsys,
             instructions,
             colors[0],
             line_widths[wi],
@@ -267,40 +180,12 @@ int main() {
         printf("└ Elapsed: %.1f seconds\n", elapsed);
     }
 
-    // for (int wi = 0; wi < 4; wi++) {
-        // printf(
-        //     "Drawing: output/infinite-leaf_line(3-1)_palette(%s)_iter(%d).png\n",
-        //     palette_name,
-        //     lsys.iterations
-        // );
-
-        // char file_name[100];
-        // sprintf(
-        //     file_name,
-        //     "output/infinite-leaf_line(3-1)_palette(%s)_iter(%d).png",
-        //     palette_name,
-        //     lsys.iterations
-        // );
-
-        // lsys_draw(
-        //     &viewport,
-        //     coord_system,
-        //     &lsys,
-        //     instructions,
-        //     palette,
-        //     palette_size,
-        //     3,
-        //     file_name
-        // );
-    // }
-
     free(instructions);
     free(coord_system);
-    free(lsys.rules);
+    lsys_destroy(lsys);
 
-    clock_t end = clock();
-    double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("Total: %.1f seconds\n", elapsed);
+    double total_elapsed = timer_stop(&total_timer);
+    printf("Total: %.1f seconds\n", total_elapsed);
 
     return 0;
 }

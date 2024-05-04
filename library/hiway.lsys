@@ -1,0 +1,7 @@
+angle: 90
+rotation: 0
+axiom: FX
+
+X = FX+FY
+Y = FX-FY
+F =

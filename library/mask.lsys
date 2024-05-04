@@ -1,0 +1,5 @@
+angle: 36
+axiom: fx
+x = ++fx--fy--fx++
+y = --fx++fy++fx--
+f =
