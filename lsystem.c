@@ -43,8 +43,7 @@ void print_usage(char* program_name) {
     printf("Usage: %s --file filename ", program_name);
     printf("--viewport WxH ");
     printf("[--iter iterations] ");
-    printf("[--max-line-width n] ");
-    printf("[--min-line-width n] ");
+    printf("[--line spec] ");
     printf("[--padding n] ");
     printf("[--foreground spec] ");
     printf("[--background spec] ");
@@ -275,8 +274,9 @@ int main(int argc, char** argv) {
     char file_name[100];
     sprintf(
         file_name,
-        "output/%s_fg-%s_bg-%s_line-%s_iter(%d).png",
+        "output/%s_%s_fg-%s_bg-%s_line-%s_iter(%d).png",
         lsys_name,
+        viewport_str(options.viewport),
         options.max_line_width,
         options.min_line_width,
         options.plugin_strs[1],
@@ -300,11 +300,17 @@ int main(int argc, char** argv) {
     double elapsed = timer_stop(&timer);
     printf("└ Elapsed: %.1f seconds\n", elapsed);
 
-    free(instructions);
-    lsys_destroy(lsys);
-
     double total_elapsed = timer_stop(&total_timer);
     printf("Total: %.1f seconds\n", total_elapsed);
+
+    for (int i = 0; i < options.plugins_count; i++) {
+        free(options.plugin_strs[i]);
+        // TODO: call type-specific destroy functions for plugins
+    }
+
+    free(options.plugin_strs);
+    free(instructions);
+    lsys_destroy(lsys);
 
     return 0;
 }

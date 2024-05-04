@@ -15,3 +15,9 @@ Viewport viewport_parse(const char* str) {
         exit(EXIT_FAILURE);
     }
 }
+
+char* viewport_str(Viewport vp) {
+    char* str = malloc(100);
+    sprintf(str, "%gx%g", vp.width, vp.height);
+    return str;
+}
