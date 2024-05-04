@@ -44,12 +44,12 @@ void add_rule(LSystem* lsys, char symbol, char* substitution) {
     string_to_upper(lsys->rules[lsys->rules_count - 1].substitution);
 }
 
-LSystem* lsys_load(char* file_name) {
-    LSystem* lsys = malloc(sizeof(LSystem));
-    lsys->rotation = 0;
-    lsys->rules = NULL;
-    lsys->rules_count = 0;
-    lsys->iterations = 0;
+LSystem lsys_load(char* file_name) {
+    LSystem lsys;
+    lsys.rotation = 0;
+    lsys.rules = NULL;
+    lsys.rules_count = 0;
+    lsys.iterations = 0;
 
     State state = INIT;
     FILE* file = fopen(file_name, "r");
@@ -141,7 +141,7 @@ LSystem* lsys_load(char* file_name) {
                     state = PROP_VALUE;
                 } else if (c == '\n' || c == EOF) {
                     value[value_index] = '\0';
-                    set_prop(lsys, name, value, line_number);
+                    set_prop(&lsys, name, value, line_number);
                     value_index = 0;
                     state = INIT;
                     if (c == EOF) {
@@ -157,7 +157,7 @@ LSystem* lsys_load(char* file_name) {
                     state = RULE_VALUE;
                 } else if (c == '\n' || c == EOF) {
                     value[value_index] = '\0';
-                    add_rule(lsys, name[0], value);
+                    add_rule(&lsys, name[0], value);
                     value_index = 0;
                     if (c == EOF) {
                         goto end;

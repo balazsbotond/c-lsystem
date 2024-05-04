@@ -7,4 +7,7 @@ typedef struct {
     unsigned char blue;
 } Color;
 
+Color color_parse(const char* str);
+char* color_str(Color color);
+
 #endif // COLOR_H

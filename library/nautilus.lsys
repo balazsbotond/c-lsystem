@@ -1,0 +1,5 @@
+  angle: 8.181818
+  axiom: [x]
+  rotation: 0
+
+x=[@.9+f+f+f+fx[++@.4x]]

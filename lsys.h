@@ -8,6 +8,7 @@
 #include "turtle_stack.h"
 #include "vector.h"
 #include "viewport.h"
+#include <cairo.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -29,31 +30,46 @@ typedef void (*TurtleAction)(Turtle* turtle, TurtleStack* stack, Vector prev, vo
 typedef void (*RenderProgressAction)(size_t current, size_t total);
 typedef void (*IterateProgressAction)(int i, void* data);
 
-void lsys_print(LSystem* lsys);
+typedef void (*ColorInitAction)(cairo_t* cr, void* data);
+typedef void (*ColorAction)(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data);
+typedef void (*ColorFinishAction)(cairo_t* cr, void* data);
 
-void lsys_destroy(LSystem* lsys);
+typedef struct {
+    ColorInitAction on_init;
+    ColorAction on_draw;
+    ColorFinishAction on_finish;
+    void* data;
+} Coloring;
 
-bool lsys_equals(LSystem* lsys1, LSystem* lsys2);
+Coloring coloring_pattern_create(cairo_pattern_t* pattern);
+void coloring_pattern_destroy(Coloring coloring);
+
+void lsys_print(LSystem lsys);
+
+void lsys_destroy(LSystem lsys);
+
+bool lsys_equals(LSystem lsys1, LSystem lsys2);
 
 char* lsys_iterate(
-    LSystem* lsys,
+    LSystem lsys,
     IterateProgressAction progress_action,
     void* action_data
 );
 
-Rectangle* lsys_measure(
-    LSystem* lsys,
+Rectangle lsys_measure(
+    LSystem lsys,
     char* instructions,
     RenderProgressAction progress_action
 );
 
 void lsys_draw(
-    Viewport* viewport,
-    CoordinateSystem* cs,
-    LSystem* lsys,
+    Viewport viewport,
+    CoordinateSystem cs,
+    LSystem lsys,
     char* instructions,
-    Color color,
+    Coloring coloring,
     double max_line_width,
+    double min_line_width,
     char* file_name,
     RenderProgressAction progress_action
 );

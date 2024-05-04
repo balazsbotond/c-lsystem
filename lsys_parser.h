@@ -3,6 +3,6 @@
 
 #include "lsys.h"
 
-LSystem* lsys_load(char* file_name);
+LSystem lsys_load(char* file_name);
 
 #endif // LSYS_PARSER_H

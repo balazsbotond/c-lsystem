@@ -4,9 +4,10 @@
 #include <string.h>
 
 void cache_save(
-    LSystem* lsys,
-    Viewport* viewport,
-    CoordinateSystem* cs,
+    LSystem lsys,
+    Viewport viewport,
+    int padding,
+    CoordinateSystem cs,
     char* instructions,
     const char* file_path
 ) {
@@ -17,21 +18,22 @@ void cache_save(
         exit(1);
     }
 
-    fwrite(lsys, sizeof(LSystem), 1, file);
+    fwrite(&lsys, sizeof(LSystem), 1, file);
 
-    size_t axiom_length = strlen(lsys->axiom);
+    size_t axiom_length = strlen(lsys.axiom);
     fwrite(&axiom_length, sizeof(size_t), 1, file);
-    fwrite(lsys->axiom, sizeof(char), axiom_length, file);
+    fwrite(lsys.axiom, sizeof(char), axiom_length, file);
 
-    for (int i = 0; i < lsys->rules_count; i++) {
-        fwrite(&lsys->rules[i].symbol, sizeof(char), 1, file);
-        size_t substitution_length = strlen(lsys->rules[i].substitution);
+    for (int i = 0; i < lsys.rules_count; i++) {
+        fwrite(&lsys.rules[i].symbol, sizeof(char), 1, file);
+        size_t substitution_length = strlen(lsys.rules[i].substitution);
         fwrite(&substitution_length, sizeof(size_t), 1, file);
-        fwrite(lsys->rules[i].substitution, sizeof(char), substitution_length, file);
+        fwrite(lsys.rules[i].substitution, sizeof(char), substitution_length, file);
     }
 
-    fwrite(viewport, sizeof(Viewport), 1, file);
-    fwrite(cs, sizeof(CoordinateSystem), 1, file);
+    fwrite(&viewport, sizeof(Viewport), 1, file);
+    fwrite(&padding, sizeof(int), 1, file);
+    fwrite(&cs, sizeof(CoordinateSystem), 1, file);
     
     size_t instructions_length = strlen(instructions);
     fwrite(&instructions_length, sizeof(size_t), 1, file);
@@ -41,9 +43,10 @@ void cache_save(
 }
 
 bool cache_load(
-    LSystem** lsys,
-    Viewport** viewport,
-    CoordinateSystem** cs,
+    LSystem* lsys,
+    Viewport* viewport,
+    int* padding,
+    CoordinateSystem* cs,
     char** instructions,
     const char* file_path
 ) {
@@ -53,30 +56,27 @@ bool cache_load(
         return false;
     }
 
-    *lsys = malloc(sizeof(LSystem));
-    fread(*lsys, sizeof(LSystem), 1, file);
+    fread(lsys, sizeof(LSystem), 1, file);
 
     size_t axiom_length;
     fread(&axiom_length, sizeof(size_t), 1, file);
-    (*lsys)->axiom = malloc(sizeof(char) * (axiom_length + 1));
-    fread((*lsys)->axiom, sizeof(char), axiom_length, file);
-    (*lsys)->axiom[axiom_length] = '\0';
+    lsys->axiom = malloc(sizeof(char) * (axiom_length + 1));
+    fread(lsys->axiom, sizeof(char), axiom_length, file);
+    lsys->axiom[axiom_length] = '\0';
 
-    (*lsys)->rules = malloc(sizeof(Rule) * (*lsys)->rules_count);
-    for (int i = 0; i < (*lsys)->rules_count; i++) {
-        fread(&(*lsys)->rules[i].symbol, sizeof(char), 1, file);
+    lsys->rules = malloc(sizeof(Rule) * lsys->rules_count);
+    for (int i = 0; i < lsys->rules_count; i++) {
+        fread(&lsys->rules[i].symbol, sizeof(char), 1, file);
         size_t substitution_length;
         fread(&substitution_length, sizeof(size_t), 1, file);
-        (*lsys)->rules[i].substitution = malloc(sizeof(char) * (substitution_length + 1));
-        fread((*lsys)->rules[i].substitution, sizeof(char), substitution_length, file);
-        (*lsys)->rules[i].substitution[substitution_length] = '\0';
+        lsys->rules[i].substitution = malloc(sizeof(char) * (substitution_length + 1));
+        fread(lsys->rules[i].substitution, sizeof(char), substitution_length, file);
+        lsys->rules[i].substitution[substitution_length] = '\0';
     }
 
-    *viewport = malloc(sizeof(Viewport));
-    fread(*viewport, sizeof(Viewport), 1, file);
-
-    *cs = malloc(sizeof(CoordinateSystem));
-    fread(*cs, sizeof(CoordinateSystem), 1, file);
+    fread(viewport, sizeof(Viewport), 1, file);
+    fread(padding, sizeof(int), 1, file);
+    fread(cs, sizeof(CoordinateSystem), 1, file);
 
     size_t instructions_length;
     fread(&instructions_length, sizeof(size_t), 1, file);
@@ -90,11 +90,14 @@ bool cache_load(
 }
 
 bool cache_stale(
-    LSystem* lsys,
-    LSystem* cached_lsys,
-    Viewport* viewport,
-    Viewport* cached_viewport
+    LSystem lsys,
+    LSystem cached_lsys,
+    Viewport viewport,
+    Viewport cached_viewport,
+    int padding,
+    int cached_padding
 ) {
     return !lsys_equals(lsys, cached_lsys) ||
-        !viewport_equals(viewport, cached_viewport);
+        !viewport_equals(viewport, cached_viewport) ||
+        padding != cached_padding;
 }

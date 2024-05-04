@@ -11,10 +11,9 @@ typedef struct {
     double origin_y;
 } CoordinateSystem;
 
-CoordinateSystem* cs_fit(Rectangle* bounding_rect, Viewport* viewport, int padding);
-double cs_convert_x(CoordinateSystem* cs, double x);
-double cs_convert_y(CoordinateSystem* cs, double y);
-Vector cs_convert(CoordinateSystem* cs, Vector v);
-void cs_destroy(CoordinateSystem* cs);
+CoordinateSystem cs_fit(Rectangle bounding_rect, Viewport viewport, int padding);
+double cs_convert_x(CoordinateSystem cs, double x);
+double cs_convert_y(CoordinateSystem cs, double y);
+Vector cs_convert(CoordinateSystem cs, Vector v);
 
 #endif // COORDINATE_SYSTEM_H

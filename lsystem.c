@@ -1,8 +1,8 @@
 #include "cache.h"
 #include "color.h"
 #include "coordinate_system.h"
-#include "lsys.h"
 #include "lsys_parser.h"
+#include "lsys.h"
 #include "rectangle.h"
 #include "timer.h"
 #include "turtle_stack.h"
@@ -11,6 +11,7 @@
 #include "vector.h"
 #include "viewport.h"
 #include <cairo.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <math.h>
 #include <stdbool.h>
@@ -20,10 +21,119 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include "pattern_parser.h"
 
 #define OUTPUT_DIR "output"
 #define CACHE_DIR "cache"
-#define CACHE_FILE "cache.bin"
+#define CACHE_FILE_PATH CACHE_DIR "/cache.bin"
+
+typedef struct {
+    char* file_name;
+    int iterations;
+    int padding;
+    double max_line_width;
+    double min_line_width;
+    Viewport viewport;
+    PatternType fg_pattern_type;
+    Coloring fg_coloring;
+    char* fg_coloring_str;
+} ProgramOptions;
+
+void print_usage(char* program_name) {
+    printf("Usage: %s --file filename ", program_name);
+    printf("--viewport WxH ");
+    printf("[--iter iterations] ");
+    printf("[--max-line-width n] ");
+    printf("[--min-line-width n] ");
+    printf("[--padding n] ");
+    printf("[--foreground spec] ");
+    printf("\n");
+}
+
+ProgramOptions parse_program_options(int argc, char** argv) {
+    ProgramOptions options;
+    options.file_name = NULL;
+    options.iterations = -1;
+    options.padding = 0;
+    options.max_line_width = 1.0;
+    options.min_line_width = 1.0;
+    options.viewport = (Viewport) {0, 0};
+    options.fg_pattern_type = SOLID;
+    options.fg_coloring = coloring_pattern_create(cairo_pattern_create_rgb(1, 1, 1));
+    options.fg_coloring_str = "rgb(255,255,255)";
+
+    struct option long_options[] = {
+        {"file", required_argument, 0, 'f'},
+        {"iter", required_argument, 0, 'i'},
+        {"padding", required_argument, 0, 'p'},
+        {"max-line-width", required_argument, 0, 'W'},
+        {"min-line-width", required_argument, 0, 'w'},
+        {"viewport", required_argument, 0, 'v'},
+        {"foreground", required_argument, 0, 'c'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}  // End of array need to be filled with zeros
+    };
+
+    char opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "hi:f:p:W:w:v:c:", long_options, &option_index)) != -1) {
+        switch (opt) {
+            case 'h':
+                print_usage(argv[0]);
+                exit(EXIT_SUCCESS);
+            case 'f':
+                options.file_name = optarg;
+                break;
+            case 'i':
+                options.iterations = atoi(optarg);
+                break;
+            case 'p':
+                options.padding = atoi(optarg);
+                break;
+            case 'W':
+                options.max_line_width = atof(optarg);
+                break;
+            case 'w':
+                options.min_line_width = atof(optarg);
+                break;
+            case 'v':
+                options.viewport = viewport_parse(optarg);
+                break;
+            case 'c':
+                coloring_pattern_destroy(options.fg_coloring);
+                options.fg_pattern_type = parse_pattern_type(optarg);
+                options.fg_coloring = coloring_pattern_create(
+                    parse_pattern(optarg, &options.fg_coloring_str)
+                );
+                break; 
+            case '?':
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            default:
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    if (
+        options.file_name == NULL ||
+        options.iterations == -1 ||
+        options.viewport.width == 0 ||
+        options.viewport.height == 0 ||
+        options.max_line_width < 0 ||
+        options.min_line_width < 0 ||
+        options.min_line_width > options.max_line_width ||
+        options.padding < 0 ||
+        options.padding > options.viewport.width / 2 ||
+        options.padding > options.viewport.height / 2
+    ) {
+        print_usage(argv[0]);
+        exit(1);
+    }
+
+    return options;
+}
 
 void create_directory_if_not_exists(const char* dir_path) {
     struct stat st = {0};
@@ -66,19 +176,14 @@ void iterate_logger_action(int i, void* data) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        printf("Usage: %s <file_name> <iterations>\n", argv[0]);
-        return 1;
-    }
+    ProgramOptions options = parse_program_options(argc, argv);
 
-    char* file_name = argv[1];
-    char* lsys_name = get_filename_without_ext(file_name);
-    int iterations = atoi(argv[2]);
+    char* lsys_name = get_filename_without_ext(options.file_name);
 
-    LSystem* lsys = lsys_load(file_name);
-    lsys->iterations = iterations;
+    LSystem lsys = lsys_load(options.file_name);
+    lsys.iterations = options.iterations;
 
-    printf("Loaded from '%s':\n", file_name);
+    printf("Loaded from '%s':\n", options.file_name);
     lsys_print(lsys);
 
     create_directory_if_not_exists(OUTPUT_DIR);
@@ -86,102 +191,92 @@ int main(int argc, char** argv) {
 
     Timer total_timer = timer_start();
 
-    Viewport viewport = {4960, 7016};
-    LSystem* cached_lsys;
-    Viewport* cached_viewport;
+    LSystem cached_lsys;
+    Viewport cached_viewport;
+    int cached_padding;
+    CoordinateSystem coord_system;
     char* instructions;
-    CoordinateSystem* coord_system;
-
-    char cache_file_path[256];
-    sprintf(cache_file_path, "%s/%s", CACHE_DIR, CACHE_FILE);
 
     bool cache_loaded = cache_load(
         &cached_lsys,
         &cached_viewport,
+        &cached_padding,
         &coord_system,
         &instructions,
-        cache_file_path
+        CACHE_FILE_PATH
     );
 
-    bool stale = !cache_loaded ||
-        cache_stale(lsys, cached_lsys, &viewport, cached_viewport);
+    bool stale = !cache_loaded || cache_stale(
+        lsys,
+        cached_lsys,
+        options.viewport,
+        cached_viewport,
+        options.padding,
+        cached_padding
+    );
 
     if (cache_loaded && !stale) {
         printf("Cache loaded.\n");
     } else {
         if (cache_loaded && stale) {
             printf("Cache stale; recalculating.\n");
-            free(cached_lsys->rules);
-            free(cached_lsys);
-            free(cached_viewport);
+            lsys_destroy(cached_lsys);
             free(instructions);
-            free(coord_system);
         }
     
         printf("Iterating:\n");
         Timer timer = timer_start();
-        IterateLoggerData ild = {&timer, lsys->iterations};
+        IterateLoggerData ild = {&timer, lsys.iterations};
         instructions = lsys_iterate(lsys, iterate_logger_action, &ild);
 
         printf("Measuring:\n");
         timer = timer_start();
-        Rectangle* bounding_rect = lsys_measure(lsys, instructions, percentage_logger_action);
+        Rectangle bounding_rect = lsys_measure(lsys, instructions, percentage_logger_action);
         double elapsed = timer_stop(&timer);
         printf("└ Elapsed: %.1f seconds\n", elapsed);
 
-        coord_system = cs_fit(bounding_rect, &viewport, 400);
+        coord_system = cs_fit(bounding_rect, options.viewport, options.padding);
 
-        cache_save(lsys, &viewport, coord_system, instructions, cache_file_path);
-        printf("Cache saved.\n");
-
-        free(bounding_rect);
-    }
-
-    Color colors[] = {
-        {234, 173, 237}, // light pink
-        {143, 248, 226}, // light cyan
-        {235, 190, 237}, // lighter pink
-        {199, 220, 208}, // light teal
-        {143, 211, 255}, // light blue
-        {255, 255, 255},
-        {204, 181, 74},
-        {110, 240, 74},
-        {84, 112, 240}
-    };
-    int num_colors = 9;
-    // double line_widths[] = {1, 2, 3, 4};
-    // int num_line_widths = 4;
-    double line_widths[] = {4};
-    int num_line_widths = 1;
-
-    for (int wi = 0; wi < num_line_widths; wi++) {
-        char file_name[100];
-        sprintf(
-            file_name,
-            "output/%s_line(%g-1)_grad(yellow-blue)_iter(%d).png",
-            lsys_name,
-            line_widths[wi],
-            lsys->iterations
-        );
-
-        printf("Drawing: %s\n", file_name);
-        Timer timer = timer_start();
-        lsys_draw(
-            &viewport,
-            coord_system,
+        cache_save(
             lsys,
+            options.viewport,
+            options.padding,
+            coord_system,
             instructions,
-            colors[0],
-            line_widths[wi],
-            file_name,
-            percentage_logger_action
+            CACHE_FILE_PATH
         );
-        double elapsed = timer_stop(&timer);
-        printf("└ Elapsed: %.1f seconds\n", elapsed);
+
+        printf("Cache saved.\n");
     }
+
+    char file_name[100];
+    sprintf(
+        file_name,
+        "output/%s_line(%g-%g)_%s_iter(%d).png",
+        lsys_name,
+        options.max_line_width,
+        options.min_line_width,
+        options.fg_coloring_str,
+        lsys.iterations
+    );
+
+    printf("Drawing: %s\n", file_name);
+    Timer timer = timer_start();
+    lsys_draw(
+        options.viewport,
+        coord_system,
+        lsys,
+        instructions,
+        options.fg_coloring,
+        options.max_line_width,
+        options.min_line_width,
+        file_name,
+        percentage_logger_action
+    );
+    double elapsed = timer_stop(&timer);
+    printf("└ Elapsed: %.1f seconds\n", elapsed);
 
     free(instructions);
-    free(coord_system);
     lsys_destroy(lsys);
 
     double total_elapsed = timer_stop(&total_timer);
