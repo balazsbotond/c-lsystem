@@ -3,6 +3,7 @@
 #include "coordinate_system.h"
 #include "lsys_parser.h"
 #include "lsys.h"
+#include "plugin_parser.h"
 #include "rectangle.h"
 #include "timer.h"
 #include "turtle_stack.h"
@@ -21,7 +22,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include "pattern_parser.h"
 
 #define OUTPUT_DIR "output"
 #define CACHE_DIR "cache"
@@ -34,9 +34,9 @@ typedef struct {
     double max_line_width;
     double min_line_width;
     Viewport viewport;
-    PatternType fg_pattern_type;
-    Coloring fg_coloring;
-    char* fg_coloring_str;
+    Plugin* plugins;
+    int plugins_count;
+    char** plugin_strs;
 } ProgramOptions;
 
 void print_usage(char* program_name) {
@@ -47,6 +47,7 @@ void print_usage(char* program_name) {
     printf("[--min-line-width n] ");
     printf("[--padding n] ");
     printf("[--foreground spec] ");
+    printf("[--background spec] ");
     printf("\n");
 }
 
@@ -58,18 +59,25 @@ ProgramOptions parse_program_options(int argc, char** argv) {
     options.max_line_width = 1.0;
     options.min_line_width = 1.0;
     options.viewport = (Viewport) {0, 0};
-    options.fg_pattern_type = SOLID;
-    options.fg_coloring = coloring_pattern_create(cairo_pattern_create_rgb(1, 1, 1));
-    options.fg_coloring_str = "rgb(255,255,255)";
+    
+    StackDepthLineWidthOptions stack_depth_line_width_options = {1.0, 1.0, 1};
+
+    char* background_str = NULL;
+    char* foreground_str = NULL;
+    char* line_str = strdup("stack(1)");
+    Plugin background_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(0, 0, 0)", &background_str));
+    Plugin foreground_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(255, 255, 255)", &foreground_str));
+    Plugin line_plugin = lsys_plugin_stack_depth_line_width_create(parse_stack_depth_line_width_options("stack(1)"));
+printf("Debug: fg=%s, bg=%s, line=%s\n", foreground_str, background_str, line_str);
 
     struct option long_options[] = {
         {"file", required_argument, 0, 'f'},
         {"iter", required_argument, 0, 'i'},
         {"padding", required_argument, 0, 'p'},
-        {"max-line-width", required_argument, 0, 'W'},
-        {"min-line-width", required_argument, 0, 'w'},
+        {"line", required_argument, 0, 'l'},
         {"viewport", required_argument, 0, 'v'},
         {"foreground", required_argument, 0, 'c'},
+        {"background", required_argument, 0, 'b'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}  // End of array need to be filled with zeros
     };
@@ -77,7 +85,7 @@ ProgramOptions parse_program_options(int argc, char** argv) {
     char opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "hi:f:p:W:w:v:c:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hi:f:p:l:v:c:", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'h':
                 print_usage(argv[0]);
@@ -91,20 +99,26 @@ ProgramOptions parse_program_options(int argc, char** argv) {
             case 'p':
                 options.padding = atoi(optarg);
                 break;
-            case 'W':
-                options.max_line_width = atof(optarg);
-                break;
-            case 'w':
-                options.min_line_width = atof(optarg);
+            case 'l':
+                lsys_plugin_stack_depth_line_width_destroy(line_plugin);
+                line_plugin = lsys_plugin_stack_depth_line_width_create(
+                    parse_stack_depth_line_width_options(optarg)
+                );
+                line_str = strdup(optarg);
                 break;
             case 'v':
                 options.viewport = viewport_parse(optarg);
                 break;
             case 'c':
-                coloring_pattern_destroy(options.fg_coloring);
-                options.fg_pattern_type = parse_pattern_type(optarg);
-                options.fg_coloring = coloring_pattern_create(
-                    parse_pattern(optarg, &options.fg_coloring_str)
+                lsys_plugin_pattern_destroy(foreground_plugin);
+                foreground_plugin = lsys_plugin_pattern_create(
+                    parse_pattern(optarg, &foreground_str)
+                );
+                break; 
+            case 'b':
+                lsys_plugin_bg_pattern_destroy(background_plugin);
+                background_plugin = lsys_plugin_bg_pattern_create(
+                    parse_pattern(optarg, &background_str)
                 );
                 break; 
             case '?':
@@ -131,6 +145,16 @@ ProgramOptions parse_program_options(int argc, char** argv) {
         print_usage(argv[0]);
         exit(1);
     }
+
+    options.plugins_count = 3;
+    options.plugins = malloc(3 * sizeof(Plugin));
+    options.plugins[0] = background_plugin;
+    options.plugins[1] = foreground_plugin;
+    options.plugins[2] = line_plugin;
+    options.plugin_strs = malloc(3 * sizeof(char*));
+    options.plugin_strs[0] = background_str;
+    options.plugin_strs[1] = foreground_str;
+    options.plugin_strs[2] = line_str;
 
     return options;
 }
@@ -249,14 +273,17 @@ int main(int argc, char** argv) {
         printf("Cache saved.\n");
     }
 
+printf("Debug: fg=%s, bg=%s, line=%s\n", options.plugin_strs[1], options.plugin_strs[0], options.plugin_strs[2]);
     char file_name[100];
     sprintf(
         file_name,
-        "output/%s_line(%g-%g)_%s_iter(%d).png",
+        "output/%s_fg-%s_bg-%s_line-%s_iter(%d).png",
         lsys_name,
         options.max_line_width,
         options.min_line_width,
-        options.fg_coloring_str,
+        options.plugin_strs[1],
+        options.plugin_strs[0],
+        options.plugin_strs[2],
         lsys.iterations
     );
 
@@ -267,9 +294,8 @@ int main(int argc, char** argv) {
         coord_system,
         lsys,
         instructions,
-        options.fg_coloring,
-        options.max_line_width,
-        options.min_line_width,
+        options.plugins,
+        options.plugins_count,
         file_name,
         percentage_logger_action
     );

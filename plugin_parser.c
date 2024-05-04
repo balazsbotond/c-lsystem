@@ -1,4 +1,4 @@
-#include "pattern_parser.h"
+#include "plugin_parser.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +59,6 @@ cairo_pattern_t* parse_solid_color(const char* spec, char** pattern_str) {
 
     cairo_pattern_t* p = cairo_pattern_create_rgb(r / 255.0, g / 255.0, b / 255.0);
 
-printf("p: %p\n", p);
     return p;
 }
 
@@ -111,14 +110,21 @@ cairo_pattern_t* parse_pattern(const char* spec, char** pattern_str) {
     }
 }
 
-// int main(int argc, char **argv) {
-//     char solid_color_spec[] = "rgb(255,0,0)";
-//     char linear_gradient_spec[] = "linear(golden,0,0,100,0)";
-//     char radial_gradient_spec[] = "radial(strawberry,50,50,10,150,150,50)";
+StackDepthLineWidthOptions parse_stack_depth_line_width_options(const char* spec) {
+    StackDepthLineWidthOptions options;
+    options.step = 1;
 
-//     cairo_pattern_t* solid_color = parse_pattern(solid_color_spec);
-//     cairo_pattern_t* linear_gradient = parse_pattern(linear_gradient_spec);
-//     cairo_pattern_t* radial_gradient = parse_pattern(radial_gradient_spec);
+    int num_parsed = sscanf(spec, "stack(%lf,%lf,%d)", &options.max_width, &options.min_width, &options.step);
 
-//     return 0;
-// }
+    if (num_parsed < 1) {
+        fprintf(stderr, "Invalid format for stack depth line width options: %s\n", spec);
+        exit(EXIT_FAILURE);
+    }
+
+    if (num_parsed == 1) {
+        options.min_width = options.max_width;
+    }
+    // if num_parsed == 2, step is already set to 1
+
+    return options;
+}

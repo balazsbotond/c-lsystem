@@ -203,47 +203,110 @@ Rectangle lsys_measure(
     return bounding_rect;
 }
 
-void coloring_pattern_init(cairo_t* cr, void* data) {
+void plugin_bg_pattern_init(cairo_t* cr, void* data) {
+    cairo_pattern_t* pattern = (cairo_pattern_t*)data;
+    cairo_set_source(cr, pattern);
+    cairo_paint(cr);
+}
+
+void plugin_bg_pattern_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
+    // do nothing
+}
+
+void plugin_bg_pattern_finish(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+Plugin lsys_plugin_bg_pattern_create(cairo_pattern_t* pattern) {
+    Plugin plugin;
+    plugin.on_init = plugin_bg_pattern_init;
+    plugin.on_draw = plugin_bg_pattern_draw;
+    plugin.on_finish = plugin_bg_pattern_finish;
+    plugin.data = pattern;
+
+    return plugin;
+}
+
+void lsys_plugin_bg_pattern_destroy(Plugin plugin) {
+    cairo_pattern_destroy((cairo_pattern_t*)plugin.data);
+}
+
+void plugin_pattern_init(cairo_t* cr, void* data) {
     cairo_pattern_t* pattern = (cairo_pattern_t*)data;
     cairo_set_source(cr, pattern);
 }
 
-void coloring_pattern_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
+void plugin_pattern_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
     // do nothing
 }
 
-void coloring_pattern_finish(cairo_t* cr, void* data) {
+void plugin_pattern_finish(cairo_t* cr, void* data) {
     // do nothing
 }
 
-Coloring coloring_pattern_create(cairo_pattern_t* pattern) {
-    Coloring coloring;
-    coloring.on_init = coloring_pattern_init;
-    coloring.on_draw = coloring_pattern_draw;
-    coloring.on_finish = coloring_pattern_finish;
-    coloring.data = pattern;
+Plugin lsys_plugin_pattern_create(cairo_pattern_t* pattern) {
+    Plugin plugin;
+    plugin.on_init = plugin_pattern_init;
+    plugin.on_draw = plugin_pattern_draw;
+    plugin.on_finish = plugin_pattern_finish;
+    plugin.data = pattern;
 
-    return coloring;
+    return plugin;
 }
 
-void coloring_pattern_destroy(Coloring coloring) {
-    cairo_pattern_destroy((cairo_pattern_t*)coloring.data);
+void lsys_plugin_pattern_destroy(Plugin plugin) {
+    cairo_pattern_destroy((cairo_pattern_t*)plugin.data);
+}
+
+void plugin_stack_depth_line_width_init(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+void plugin_stack_depth_line_width_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
+    StackDepthLineWidthOptions* opts = (StackDepthLineWidthOptions*)data;
+
+    double line_width = max(
+        opts->min_width,
+        opts->max_width - (stack->top / (double)opts->step)
+    );
+
+    cairo_set_line_width(cr, line_width);
+}
+
+void plugin_stack_depth_line_width_finish(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+Plugin lsys_plugin_stack_depth_line_width_create(StackDepthLineWidthOptions options) {
+    StackDepthLineWidthOptions* opts_ptr = malloc(sizeof(StackDepthLineWidthOptions));
+    *opts_ptr = options;
+
+    Plugin plugin;
+    plugin.on_init = plugin_stack_depth_line_width_init;
+    plugin.on_draw = plugin_stack_depth_line_width_draw;
+    plugin.on_finish = plugin_stack_depth_line_width_finish;
+    plugin.data = opts_ptr;
+
+    return plugin;
+}
+
+void lsys_plugin_stack_depth_line_width_destroy(Plugin plugin) {
+    // do nothing
 }
 
 typedef struct {
     cairo_t* cr;
     CoordinateSystem cs;
-    double max_line_width;
-    Coloring coloring;
+    Plugin* plugins;
+    int plugins_count;
 } DrawActionData;
 
 void draw_action(Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
     DrawActionData* dad = (DrawActionData*)data;
 
-    double line_width = max(1, dad->max_line_width - (stack->top / 5));
-    cairo_set_line_width(dad->cr, line_width);
-
-    dad->coloring.on_draw(dad->cr, turtle, stack, prev, dad->coloring.data);
+    for (int i = 0; i < dad->plugins_count; i++) {
+        dad->plugins[i].on_draw(dad->cr, turtle, stack, prev, dad->plugins[i].data);
+    }
 
     Vector prev_cs = cs_convert(dad->cs, prev);
     Vector curr_cs = cs_convert(dad->cs, turtle->pos);
@@ -258,9 +321,8 @@ void lsys_draw(
     CoordinateSystem cs,
     LSystem lsys,
     char* instructions,
-    Coloring coloring,
-    double max_line_width,
-    double min_line_width,
+    Plugin* plugins,
+    int plugins_count,
     char* file_name,
     RenderProgressAction progress_action
 ) {
@@ -271,18 +333,18 @@ void lsys_draw(
     );
     cairo_t *cr = cairo_create(surface);
 
-    cairo_set_source_rgb(cr, 0, 0, 0); // black
-    cairo_paint(cr);
+    for (int i = 0; i < plugins_count; i++) {
+        plugins[i].on_init(cr, plugins[i].data);
+    }
 
-printf("coloring.on_init(%p, %p)\n", cr, coloring.data);
-    coloring.on_init(cr, coloring.data);
-
-    DrawActionData dad = {cr, cs, max_line_width, coloring};
+    DrawActionData dad = {cr, cs, plugins, plugins_count};
     lsys_render(lsys, instructions, &dad, draw_action, progress_action);
 
     cairo_surface_write_to_png(surface, file_name);
 
-    coloring.on_finish(cr, coloring.data);
+    for (int i = 0; i < plugins_count; i++) {
+        plugins[i].on_finish(cr, plugins[i].data);
+    }
 
     cairo_destroy(cr);
     cairo_surface_destroy(surface);

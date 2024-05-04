@@ -30,19 +30,31 @@ typedef void (*TurtleAction)(Turtle* turtle, TurtleStack* stack, Vector prev, vo
 typedef void (*RenderProgressAction)(size_t current, size_t total);
 typedef void (*IterateProgressAction)(int i, void* data);
 
-typedef void (*ColorInitAction)(cairo_t* cr, void* data);
-typedef void (*ColorAction)(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data);
-typedef void (*ColorFinishAction)(cairo_t* cr, void* data);
+typedef void (*PluginInitAction)(cairo_t* cr, void* data);
+typedef void (*PluginAction)(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data);
+typedef void (*PluginFinishAction)(cairo_t* cr, void* data);
 
 typedef struct {
-    ColorInitAction on_init;
-    ColorAction on_draw;
-    ColorFinishAction on_finish;
+    PluginInitAction on_init;
+    PluginAction on_draw;
+    PluginFinishAction on_finish;
     void* data;
-} Coloring;
+} Plugin;
 
-Coloring coloring_pattern_create(cairo_pattern_t* pattern);
-void coloring_pattern_destroy(Coloring coloring);
+Plugin lsys_plugin_pattern_create(cairo_pattern_t* pattern);
+void lsys_plugin_pattern_destroy(Plugin plugin);
+
+Plugin lsys_plugin_bg_pattern_create(cairo_pattern_t* pattern);
+void lsys_plugin_bg_pattern_destroy(Plugin plugin);
+
+typedef struct {
+    double max_width;
+    double min_width;
+    int step;
+} StackDepthLineWidthOptions;
+
+Plugin lsys_plugin_stack_depth_line_width_create(StackDepthLineWidthOptions options);
+void lsys_plugin_stack_depth_line_width_destroy(Plugin plugin);
 
 void lsys_print(LSystem lsys);
 
@@ -67,9 +79,8 @@ void lsys_draw(
     CoordinateSystem cs,
     LSystem lsys,
     char* instructions,
-    Coloring coloring,
-    double max_line_width,
-    double min_line_width,
+    Plugin* plugins,
+    int plugins_count,
     char* file_name,
     RenderProgressAction progress_action
 );
