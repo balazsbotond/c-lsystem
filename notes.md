@@ -2,7 +2,7 @@
 
 ## TODO
 
-- [ ] Palette support
+- [x] Palette support
 - [ ] Support for writing iterations to disk
 - [ ] Research image libraries that might be faster than cairo
 

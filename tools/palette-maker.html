@@ -31,8 +31,8 @@
         let colors = '';
         
         for (let i = 0; i < data.length; i += 4) {
-          colors += `{${data[i]}, ${data[i+1]}, ${data[i+2]}}`;
-          if (i < data.length - 4) colors += ', \n';
+          colors += `${data[i]} ${data[i+1]} ${data[i+2]}`;
+          if (i < data.length - 4) colors += '\n';
         }
 
         document.getElementById('colorOutput').textContent = colors;

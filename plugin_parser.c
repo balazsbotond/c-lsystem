@@ -8,19 +8,6 @@ bool str_starts_with(const char *str, const char *pre) {
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-Plugin parse_bgcolor_plugin(const char* spec, char** plugin_str) {
-    ColorPluginType type = parse_color_plugin_type(spec);
-
-    switch (type) {
-        case COLOR_PLUGIN_LINEAR_PALETTE:
-        case COLOR_PLUGIN_STACK_DEPTH_PALETTE:
-            fprintf(stderr, "Palette cannot be used as a background: %s\n", spec);
-            exit(EXIT_FAILURE);
-        default:
-            return parse_color_plugin(spec, plugin_str);
-    }
-}
-
 void parse_color_stops(char* file_name, cairo_pattern_t* pattern) {
     char* file_path = malloc(strlen(file_name) + strlen("gradients/.grad") + 1);
     sprintf(file_path, "gradients/%s.grad", file_name);
@@ -240,6 +227,26 @@ Plugin parse_color_plugin(const char* spec, char** plugin_str) {
             Palette palette = parse_palette(spec, plugin_str);
             return lsys_plugin_stack_depth_palette_create(palette);
         }
+        default: {
+            fprintf(stderr, "This is not a color plugin: %s\n", spec);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+Plugin parse_bgcolor_plugin(const char* spec, char** plugin_str) {
+    ColorPluginType type = parse_color_plugin_type(spec);
+
+    switch (type) {
+        case COLOR_PLUGIN_SOLID:
+        case COLOR_PLUGIN_LINEAR_GRADIENT:
+        case COLOR_PLUGIN_RADIAL_GRADIENT:
+            cairo_pattern_t* pattern = parse_pattern(type, spec, plugin_str);
+            return lsys_plugin_bg_pattern_create(pattern);
+        case COLOR_PLUGIN_LINEAR_PALETTE:
+        case COLOR_PLUGIN_STACK_DEPTH_PALETTE:
+            fprintf(stderr, "Palette cannot be used as a background: %s\n", spec);
+            exit(EXIT_FAILURE);
         default: {
             fprintf(stderr, "This is not a color plugin: %s\n", spec);
             exit(EXIT_FAILURE);

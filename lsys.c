@@ -198,9 +198,7 @@ Rectangle lsys_measure(
     bounding_rect.right = 0;
     bounding_rect.bottom = 0;
 
-printf("first instruction before measuring: %c\n", instructions[0]);
     lsys_render(lsys, instructions, &bounding_rect, measure_action, progress_action);
-printf("first instruction after measuring: %c\n", instructions[0]);
 
     return bounding_rect;
 }
@@ -210,9 +208,11 @@ printf("first instruction after measuring: %c\n", instructions[0]);
  */
 
 void plugin_bg_pattern_init(cairo_t* cr, void* data) {
+printf("plugin_bg_pattern_init\n");
     cairo_pattern_t* pattern = (cairo_pattern_t*)data;
     cairo_set_source(cr, pattern);
     cairo_paint(cr);
+printf("plugin_bg_pattern_init end\n");
 }
 
 void plugin_bg_pattern_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
@@ -224,6 +224,7 @@ void plugin_bg_pattern_finish(cairo_t* cr, void* data) {
 }
 
 Plugin lsys_plugin_bg_pattern_create(cairo_pattern_t* pattern) {
+printf("lsys_plugin_bg_pattern_create\n");
     Plugin plugin;
     plugin.on_init = plugin_bg_pattern_init;
     plugin.on_draw = plugin_bg_pattern_draw;
@@ -242,8 +243,10 @@ void lsys_plugin_bg_pattern_destroy(Plugin plugin) {
  */
 
 void plugin_pattern_init(cairo_t* cr, void* data) {
+printf("plugin_pattern_init\n");
     cairo_pattern_t* pattern = (cairo_pattern_t*)data;
     cairo_set_source(cr, pattern);
+printf("plugin_pattern_init end\n");
 }
 
 void plugin_pattern_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
@@ -255,6 +258,7 @@ void plugin_pattern_finish(cairo_t* cr, void* data) {
 }
 
 Plugin lsys_plugin_pattern_create(cairo_pattern_t* pattern) {
+printf("lsys_plugin_pattern_create\n");
     Plugin plugin;
     plugin.on_init = plugin_pattern_init;
     plugin.on_draw = plugin_pattern_draw;
