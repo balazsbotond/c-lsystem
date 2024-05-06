@@ -56,6 +56,24 @@ typedef struct {
 Plugin lsys_plugin_stack_depth_line_width_create(StackDepthLineWidthOptions options);
 void lsys_plugin_stack_depth_line_width_destroy(Plugin plugin);
 
+typedef enum {
+    PALETTE_OVERFLOW_WRAP,
+    PALETTE_OVERFLOW_CLAMP,
+} PaletteOverflowBehavior;
+
+typedef struct {
+    Color* colors;
+    PaletteOverflowBehavior overflow;
+    int colors_count;
+    int index;
+} Palette;
+
+Plugin lsys_plugin_stack_depth_palette_create(Palette palette);
+void lsys_plugin_stack_depth_palette_destroy(Plugin plugin);
+
+Plugin lsys_plugin_linear_palette_create(Palette palette);
+void lsys_plugin_linear_palette_destroy(Plugin plugin);
+
 void lsys_print(LSystem lsys);
 
 void lsys_destroy(LSystem lsys);

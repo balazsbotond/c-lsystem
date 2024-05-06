@@ -27,8 +27,21 @@
 #define CACHE_DIR "cache"
 #define CACHE_FILE_PATH CACHE_DIR "/cache.bin"
 
+char* get_filename_without_ext(char* filepath) {
+    char* tmp = strdup(filepath);
+    char* base = basename(tmp);
+    char* lastdot = strrchr(base, '.');
+
+    if (lastdot != NULL) {
+        *lastdot = '\0';
+    }
+
+    return base;
+}
+
 typedef struct {
     char* file_name;
+    char* output_file_name;
     int iterations;
     int padding;
     double max_line_width;
@@ -36,8 +49,16 @@ typedef struct {
     Viewport viewport;
     Plugin* plugins;
     int plugins_count;
-    char** plugin_strs;
 } ProgramOptions;
+
+void program_options_destroy(ProgramOptions options) {
+    free(options.output_file_name);
+    // TODO: Destroy plugins based on their type
+    // for (int i = 0; i < options.plugins_count; i++) {
+    //     lsys_plugin_destroy(options.plugins[i]);
+    // }
+    free(options.plugins);
+}
 
 void print_usage(char* program_name) {
     printf("Usage: %s --file filename ", program_name);
@@ -50,7 +71,7 @@ void print_usage(char* program_name) {
     printf("\n");
 }
 
-ProgramOptions parse_program_options(int argc, char** argv) {
+ProgramOptions program_options_parse(int argc, char** argv) {
     ProgramOptions options;
     options.file_name = NULL;
     options.iterations = -1;
@@ -64,8 +85,8 @@ ProgramOptions parse_program_options(int argc, char** argv) {
     char* background_str = NULL;
     char* foreground_str = NULL;
     char* line_str = strdup("stack(1)");
-    Plugin background_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(0, 0, 0)", &background_str));
-    Plugin foreground_plugin = lsys_plugin_pattern_create(parse_pattern("rgb(255, 255, 255)", &foreground_str));
+    Plugin background_plugin = parse_bgcolor_plugin("rgb(0, 0, 0)", &background_str);
+    Plugin foreground_plugin = parse_color_plugin("rgb(255, 255, 255)", &foreground_str);
     Plugin line_plugin = lsys_plugin_stack_depth_line_width_create(parse_stack_depth_line_width_options("stack(1)"));
 
     struct option long_options[] = {
@@ -109,15 +130,11 @@ ProgramOptions parse_program_options(int argc, char** argv) {
                 break;
             case 'c':
                 lsys_plugin_pattern_destroy(foreground_plugin);
-                foreground_plugin = lsys_plugin_pattern_create(
-                    parse_pattern(optarg, &foreground_str)
-                );
+                foreground_plugin = parse_color_plugin(optarg, &foreground_str);
                 break; 
             case 'b':
                 lsys_plugin_bg_pattern_destroy(background_plugin);
-                background_plugin = lsys_plugin_bg_pattern_create(
-                    parse_pattern(optarg, &background_str)
-                );
+                background_plugin = parse_bgcolor_plugin(optarg, &background_str);
                 break; 
             case '?':
                 print_usage(argv[0]);
@@ -149,10 +166,25 @@ ProgramOptions parse_program_options(int argc, char** argv) {
     options.plugins[0] = background_plugin;
     options.plugins[1] = foreground_plugin;
     options.plugins[2] = line_plugin;
-    options.plugin_strs = malloc(3 * sizeof(char*));
-    options.plugin_strs[0] = background_str;
-    options.plugin_strs[1] = foreground_str;
-    options.plugin_strs[2] = line_str;
+
+    char* lsys_name = get_filename_without_ext(options.file_name);
+    char* viewport_name = viewport_str(options.viewport);
+
+    asprintf(
+        &options.output_file_name,
+        "%s/%s_%s_fg-%s_bg-%s_line-%s_iter(%d).png",
+        OUTPUT_DIR,
+        lsys_name,
+        viewport_name,
+        options.max_line_width,
+        options.min_line_width,
+        foreground_str,
+        background_str,
+        line_str,
+        options.iterations
+    );
+
+    free(viewport_name);
 
     return options;
 }
@@ -163,18 +195,6 @@ void create_directory_if_not_exists(const char* dir_path) {
     if (stat(dir_path, &st) == -1) {
         mkdir(dir_path, 0700);
     }
-}
-
-char* get_filename_without_ext(char* filepath) {
-    char* tmp = strdup(filepath);
-    char* base = basename(tmp);
-    char* lastdot = strrchr(base, '.');
-
-    if (lastdot != NULL) {
-        *lastdot = '\0';
-    }
-
-    return base;
 }
 
 void percentage_logger_action(size_t current, size_t total) {
@@ -198,9 +218,7 @@ void iterate_logger_action(int i, void* data) {
 }
 
 int main(int argc, char** argv) {
-    ProgramOptions options = parse_program_options(argc, argv);
-
-    char* lsys_name = get_filename_without_ext(options.file_name);
+    ProgramOptions options = program_options_parse(argc, argv);
 
     LSystem lsys = lsys_load(options.file_name);
     lsys.iterations = options.iterations;
@@ -271,21 +289,7 @@ int main(int argc, char** argv) {
         printf("Cache saved.\n");
     }
 
-    char file_name[100];
-    sprintf(
-        file_name,
-        "output/%s_%s_fg-%s_bg-%s_line-%s_iter(%d).png",
-        lsys_name,
-        viewport_str(options.viewport),
-        options.max_line_width,
-        options.min_line_width,
-        options.plugin_strs[1],
-        options.plugin_strs[0],
-        options.plugin_strs[2],
-        lsys.iterations
-    );
-
-    printf("Drawing: %s\n", file_name);
+    printf("Drawing: %s\n", options.output_file_name);
     Timer timer = timer_start();
     lsys_draw(
         options.viewport,
@@ -294,22 +298,18 @@ int main(int argc, char** argv) {
         instructions,
         options.plugins,
         options.plugins_count,
-        file_name,
+        options.output_file_name,
         percentage_logger_action
     );
+
     double elapsed = timer_stop(&timer);
     printf("└ Elapsed: %.1f seconds\n", elapsed);
 
     double total_elapsed = timer_stop(&total_timer);
     printf("Total: %.1f seconds\n", total_elapsed);
 
-    for (int i = 0; i < options.plugins_count; i++) {
-        free(options.plugin_strs[i]);
-        // TODO: call type-specific destroy functions for plugins
-    }
-
-    free(options.plugin_strs);
     free(instructions);
+    program_options_destroy(options);
     lsys_destroy(lsys);
 
     return 0;

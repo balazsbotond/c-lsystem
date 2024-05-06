@@ -1,5 +1,11 @@
 # L-system renderer in C
 
+## TODO
+
+- [ ] Palette support
+- [ ] Support for writing iterations to disk
+- [ ] Research image libraries that might be faster than cairo
+
 ## Paper sizes
 
 ```c

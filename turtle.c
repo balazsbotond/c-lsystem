@@ -26,9 +26,9 @@ void turtle_turn_around(Turtle* turtle) {
 }
 
 void turtle_turn_left(Turtle *turtle, double angle) {
-    double angleRad = (turtle->reverse ? -1 : 1) * to_rad(angle);
+    double angle_rad = (turtle->reverse ? -1 : 1) * to_rad(angle);
     
-    turtle->angle = fmod(turtle->angle + angleRad, 2 * M_PI);
+    turtle->angle = fmod(turtle->angle + angle_rad, 2 * M_PI);
 }
 
 void turtle_turn_right(Turtle *turtle, double angle) {

@@ -198,7 +198,9 @@ Rectangle lsys_measure(
     bounding_rect.right = 0;
     bounding_rect.bottom = 0;
 
+printf("first instruction before measuring: %c\n", instructions[0]);
     lsys_render(lsys, instructions, &bounding_rect, measure_action, progress_action);
+printf("first instruction after measuring: %c\n", instructions[0]);
 
     return bounding_rect;
 }
@@ -304,6 +306,92 @@ Plugin lsys_plugin_stack_depth_line_width_create(StackDepthLineWidthOptions opti
 
 void lsys_plugin_stack_depth_line_width_destroy(Plugin plugin) {
     // do nothing
+}
+
+/*
+ * Stack depth palette plugin
+ */
+
+void plugin_stack_depth_palette_init(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+void plugin_stack_depth_palette_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
+    Palette* palette = (Palette*)data;
+
+    int color_index = palette->overflow == PALETTE_OVERFLOW_WRAP
+        ? stack->top % palette->colors_count
+        : min(stack->top, palette->colors_count - 1);
+
+    Color color = palette->colors[color_index];
+
+    cairo_set_source_rgb(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
+}
+
+void plugin_stack_depth_palette_finish(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+Plugin lsys_plugin_stack_depth_palette_create(Palette palette) {
+    Palette* palette_ptr = malloc(sizeof(Palette));
+    *palette_ptr = palette;
+
+    Plugin plugin;
+    plugin.on_init = plugin_stack_depth_palette_init;
+    plugin.on_draw = plugin_stack_depth_palette_draw;
+    plugin.on_finish = plugin_stack_depth_palette_finish;
+    plugin.data = palette_ptr;
+
+    return plugin;
+}
+
+void lsys_plugin_stack_depth_palette_destroy(Plugin plugin) {
+    Palette* palette = (Palette*)plugin.data;
+    free(palette->colors);
+    free(palette);
+}
+
+/*
+ * Linear palette plugin
+ */
+
+void plugin_linear_palette_init(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+void plugin_linear_palette_draw(cairo_t* cr, Turtle* turtle, TurtleStack* stack, Vector prev, void* data) {
+    Palette* palette = (Palette*)data;
+
+    Color color = palette->colors[palette->index];
+    palette->index =
+        palette->overflow == PALETTE_OVERFLOW_WRAP
+            ? (palette->index + 1) % palette->colors_count
+            : min(palette->index + 1, palette->colors_count - 1);
+
+    cairo_set_source_rgb(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
+}
+
+void plugin_linear_palette_finish(cairo_t* cr, void* data) {
+    // do nothing
+}
+
+Plugin lsys_plugin_linear_palette_create(Palette palette) {
+    Palette* palette_ptr = malloc(sizeof(Palette));
+    *palette_ptr = palette;
+
+    Plugin plugin;
+    plugin.on_init = plugin_linear_palette_init;
+    plugin.on_draw = plugin_linear_palette_draw;
+    plugin.on_finish = plugin_linear_palette_finish;
+    plugin.data = palette_ptr;
+
+    return plugin;
+}
+
+void lsys_plugin_linear_palette_destroy(Plugin plugin) {
+    Palette* palette = (Palette*)plugin.data;
+    free(palette->colors);
+    free(palette);
 }
 
 typedef struct {

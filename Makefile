@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=`pkg-config --cflags cairo` -g
-LIBS=`pkg-config --libs cairo` -lm
+LIBS=`pkg-config --libs cairo` -lm -g
 OBJS=lsystem.o lsys.o turtle_stack.o turtle.o vector.o utils.o viewport.o coordinate_system.o cache.o timer.o lsys_parser.o color.o plugin_parser.o
 
 lsystem: $(OBJS)
