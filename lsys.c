@@ -1,3 +1,4 @@
+#include "char_stream.h"
 #include "lsys.h"
 #include "turtle_stack.h"
 #include "turtle.h"
@@ -9,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#define CACHE_FILE_PATTERN "cache/iter-%d.txt"
 
 char* lookup_rule(LSystem lsys, char symbol) {
     for (int i = 0; i < lsys.rules_count; i++) {
@@ -49,53 +52,76 @@ bool lsys_equals(LSystem lsys1, LSystem lsys2) {
     return true;
 }
 
-char* lsys_iterate(
+CharReader* lsys_iterate(
     LSystem lsys,
+    int disk_write_start_iteration,
     IterateProgressAction progress_action,
     void* action_data
 ) {
-    char* current = malloc(sizeof(char) * (strlen(lsys.axiom) + 1));
-    strcpy(current, lsys.axiom);
-    char* next;
+    char* current_str = malloc(sizeof(char) * (strlen(lsys.axiom) + 1));
+    strcpy(current_str, lsys.axiom);
+    CharReader* current = string_reader_create(current_str);
+    CharWriter* next;
 
     for (int i = 0; i < lsys.iterations; i++) {
-
         clock_t start = clock();
-        size_t next_length = 0;
-        char* cp = current;
+        bool is_src_disk = disk_write_start_iteration != -1 && i > disk_write_start_iteration;
+        bool is_dest_disk = disk_write_start_iteration != -1 && i >= disk_write_start_iteration;
+        char c;
 
-        while (*cp != '\0') {
-            char* substitution = lookup_rule(lsys, *cp);
-            next_length += substitution != NULL ? strlen(substitution) : 1;
-            cp++;
-        }
+        if (is_dest_disk) {
+            char* cache_file_name = asprintf(CACHE_FILE_PATTERN, i);
+            next = file_writer_create(cache_file_name);
+            free(cache_file_name);
+        } else {
+            size_t next_length = 0;
 
-        next = malloc(sizeof(char) * (next_length + 1));
-
-        cp = current;
-        char* np = next;
-
-        while (*cp != '\0') {
-            char* substitution = lookup_rule(lsys, *cp);
-
-            if (substitution != NULL) {
-                strcpy(np, substitution);
-                np += strlen(substitution);
-            } else {
-                *np = *cp;
-                np++;
+            while ((c = current->read(current)) != EOF) {
+                char* substitution = lookup_rule(lsys, c);
+                next_length += substitution != NULL ? strlen(substitution) : 1;
             }
-            cp++;
-        }
-        *np = '\0';
 
-        free(current);
-        current = next;
+            next = string_writer_create(next_length);
+        }
+
+        while ((c = current->read(current)) != EOF) {
+            char* substitution = lookup_rule(lsys, c);
+
+            if (substitution == NULL) {
+                next->write(next, c);
+                continue;
+            }
+
+            while (*substitution != '\0') {
+                next->write(next, *substitution);
+                substitution++;
+            }
+        }
+
+        if (is_src_disk) {
+            current->destroy(current);
+        } else {
+            free(current_str);
+            current->destroy(current);
+        }
+
+        if (is_dest_disk) {
+            char* current_file_name = file_writer_get_filename(next);
+            current = file_reader_create(current_file_name);
+            free(current_file_name);
+            next->destroy(next);
+        } else {
+            current_str = string_writer_get(next);
+            current = string_reader_create(current_str);
+            next->destroy(next);
+        }
 
         clock_t end = clock();
         double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
         progress_action(i, action_data);
     }
+
+    current->reset(current);
 
     return current;
 }

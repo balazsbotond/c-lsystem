@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=`pkg-config --cflags cairo` -g
 LIBS=`pkg-config --libs cairo` -lm -g
-OBJS=lsystem.o lsys.o turtle_stack.o turtle.o vector.o utils.o viewport.o coordinate_system.o cache.o timer.o lsys_parser.o color.o plugin_parser.o
+OBJS=lsystem.o lsys.o turtle_stack.o turtle.o vector.o utils.o viewport.o coordinate_system.o cache.o timer.o lsys_parser.o color.o plugin_parser.o char_reader.o
 
 lsystem: $(OBJS)
 	$(CC) -o lsystem $(OBJS) $(LIBS)
@@ -11,6 +11,9 @@ lsystem.o: lsystem.c turtle_stack.h
 
 lsys.o: lsys.c lsys.h
 	$(CC) -c lsys.c $(CFLAGS)
+
+char_reader.o: char_reader.c char_reader.h
+	$(CC) -c char_reader.c $(CFLAGS)
 
 lsys_parser.o: lsys_parser.c lsys_parser.h
 	$(CC) -c lsys_parser.c $(CFLAGS)
